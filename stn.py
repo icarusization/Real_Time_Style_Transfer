@@ -2,13 +2,19 @@ import scipy.io
 import numpy as np
 import tensorflow as tf
 import scipy.misc
-from ops import *
+import lutorpy as lua
+from opss import *
+require("torch")
+require("nn")
+decoder=torch.road('decoder.t7')
+
 batch_size=8
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 #size=[(1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 32, 32, 64), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 16, 16, 128), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 8, 8, 256), (1, 8, 8, 512), (1, 8, 8, 512), (1, 8, 8, 512), (1, 8, 8, 512)]
-size=[(1, 64, 64, 3),(1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 32, 32, 64), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 16, 16, 128), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 8, 8, 256), (1, 8, 8, 512), (1, 8, 8, 512), (1, 8, 8, 512)]
+size=[(1, 64, 64, 3),(1, 64, 64, 3), (1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 32, 32, 64), (1, 32, 32, 64), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 16, 16, 128), (1, 16, 16, 128), (1, 16, 16, 128), (1, 16, 16, 128), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 8, 8, 256), (1, 8, 8, 256), (1, 8, 8, 256), (1, 8, 8, 256)]
 #size=[(1, 64, 64, 3),(1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 64, 64, 64), (1, 32, 32, 64), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 32, 32, 128), (1, 16, 16, 128), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 16, 16, 256), (1, 8, 8, 256), (1, 8, 8, 512), (1, 8, 8, 512), (1, 8, 8, 512)]
 size=size[::-1]
+layer=[1,5,8,11,14,18,21,25,28]
 class stn(object):
 	def __init__(self):
 		self.layers = (
@@ -59,14 +65,14 @@ class stn(object):
 class dec(object):
 	def __init__(self):
 		self.layers = (
-		'conv1_1', 'relu1_1', 'conv1_2', 'relu1_2', 'pool1',
+		 'relu1_1', 'conv1_1','relu1_2','conv1_2',  'pool1',
 
-        'conv2_1', 'relu2_1', 'conv2_2', 'relu2_2', 'pool2',
+        'relu2_1','conv2_1', 'relu2_2', 'conv2_2', 'pool2',
 
-        'conv3_1', 'relu3_1', 'conv3_2', 'relu3_2', 'conv3_3',
-        'relu3_3', 'conv3_4', 'relu3_4', 'pool3',
+        'relu3_1', 'conv3_1', 'relu3_2', 'conv3_2',
+        'relu3_3', 'conv3_3','relu3_4', 'conv3_4', 'pool3',
 
-        'conv4_1', 'relu4_1', 'conv4_2', 'relu4_2'
+        'relu4_1','conv4_1',  'relu4_2', 'conv4_2'
     )
 		self.layers=self.layers[::-1]
 		assert len(self.layers)==len(size)
@@ -76,6 +82,7 @@ class dec(object):
 	    net = {}
 	    current = in_input
 	    string="dec_"
+	    net_count=0
 	    for i, name in enumerate(self.layers):
 	        kind = name[:4]
 	        new=(batch_size,)
@@ -99,7 +106,9 @@ class dec(object):
 	        	
 	        	#print [k_h, k_w,output_shape[-1],int(current.get_shape()[-1])]
 	        	#a=tf.Variable(tf.random_uniform([1, 2], -1.0, 1.0))
-	        	current=deconv2d(current,size[i],3,3,d_h,d_w,stddev=0.02,name=string+name)
+	        	weight=np.transpose(lua_model.modules[net_count].weight.asNumpyArray())
+	        	net_count+=1
+	        	current=deconv2d(current,size[i],weight,3,3,d_h,d_w,stddev=0.02,name=string+name)
 
 	        	#a = tf.Variable(tf.random_uniform([k_h, k_w,output_shape[-1],int(current.get_shape()[-1])],-1.0, 1.0))
                  #           initializer=tf.random_normal_initializer(stddev=0.02))

@@ -79,15 +79,15 @@ def conv2d(input_, output_dim,
 
         return conv
 
-def deconv2d(input_, output_shape,
+def deconv2d(input_, output_shape,weight,
              k_h, k_w, d_h=2, d_w=2, stddev=0.02,
              name="deconv2d", with_w=False):
     with tf.variable_scope(name):
         # filter : [height, width, output_channels, in_channels]
-        print d_h
-        w = tf.get_variable('w', [k_h, k_w, output_shape[-1], int(input_.get_shape()[-1])],
-                            initializer=tf.random_normal_initializer(stddev=stddev))
-        
+        #print d_h
+        #w = tf.get_variable('w', [k_h, k_w, output_shape[-1], int(input_.get_shape()[-1])],
+        #                   initializer=tf.random_normal_initializer(stddev=stddev))
+        w=tf.Variable(weight)
         try:
             deconv = tf.nn.conv2d_transpose(input_, w, output_shape=output_shape,
                                 strides=[1, d_h, d_w, 1])
